@@ -1,0 +1,2 @@
+date,decision,reasoning,expected_outcome,review_date,status
+2026-03-12,Use single-file HTML for all games,No build tooling keeps the repo simple and portable,Faster iteration; any contributor can open and edit without setup,2026-04-11,PENDING
