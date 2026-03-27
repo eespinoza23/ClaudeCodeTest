@@ -17,7 +17,13 @@ def read_attendees(excel_path: str) -> List[Dict[str, str]]:
     attendees = []
 
     # Load workbook
-    wb = load_workbook(excel_path)
+    try:
+        wb = load_workbook(excel_path)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Excel file not found: {excel_path}")
+    except Exception as e:
+        raise ValueError(f"Failed to read Excel file: {e}")
+
     ws = wb.active
 
     # Iterate through rows (skip header at row 1)
