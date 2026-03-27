@@ -73,84 +73,107 @@ def parse_attendee_data(text):
     attendees = []
     seen_emails = set()
 
-    # Split by lines
     lines = text.split('\n')
+    # Email pattern that allows underscores/hyphens but requires proper domain structure
+    email_pattern = r'([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
 
-    for line in lines:
+    # First pass: extract all emails with their immediate context
+    emails_found = {}  # email -> {line_idx, name, after_text}
+    names_found = {}   # line_idx -> name
+
+    for line_idx, line in enumerate(lines):
         line = line.strip()
 
-        # Skip empty lines and headers
-        if not line or 'Email' in line or 'Full Name' in line or '@' not in line:
+        # Skip empty and header lines
+        if not line or any(header in line.upper() for header in ['EMAIL', 'FORMAT', 'CONDITIONAL', 'MERGE', 'COPY', 'NARROW', 'SHEET', 'PASTE', 'READY', 'ACCESSIBILITY']):
             continue
 
-        # Look for email pattern (more lenient for OCR errors)
-        email_match = re.search(r'([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', line)
+        # Find emails in this line
+        for email_match in re.finditer(email_pattern, line):
+            email = email_match.group(1).lower()
 
-        if email_match:
-            email = email_match.group(1)
+            # Validate email has proper structure (no spaces in domain)
+            if email not in seen_emails and ' ' not in email:
+                seen_emails.add(email)
+                before = line[:email_match.start()].strip()
+                after = line[email_match.end():].strip()
 
-            # Skip if we've already processed this email
-            if email in seen_emails:
-                continue
-            seen_emails.add(email)
-
-            # Extract everything after the email
-            name_part = line[email_match.end():].strip()
-
-            # Split into words to extract name and other info
-            words = name_part.split()
-
-            if words:
-                # First 1-3 words are usually the name
-                # Stop at keywords: Count, No, None, Food, etc.
-                name_words = []
-                remaining_words = []
-                found_keyword = False
-
-                for word in words:
-                    if found_keyword or any(kw in word.lower() for kw in ['count', 'no', 'none', 'food', 'vegetarian', 'vegan', 'gluten']):
-                        found_keyword = True
-                        remaining_words.append(word)
-                    else:
-                        name_words.append(word)
-
-                name = ' '.join(name_words).strip()
-                remaining_text = ' '.join(remaining_words).lower()
-
-                # Sanitize name (remove extra characters from OCR)
-                name = re.sub(r'[^a-zA-Z\s\-]', '', name).strip()
-
-                if not name and len(name_words) > 0:
-                    # Try just the first name
-                    name = name_words[0]
-
-                # Parse restrictions and day info from remaining text
-                restrictions = "None"
-                if any(word in remaining_text for word in ['vegetarian', 'vegan', 'gluten', 'dairy', 'nut']):
-                    # Try to extract the restriction phrase
-                    for restriction in ['vegetarian', 'vegan', 'gluten free', 'dairy free', 'nut free']:
-                        if restriction.lower() in remaining_text:
-                            restrictions = restriction.capitalize()
+                # Try to extract name from this line
+                name = ""
+                if after:
+                    words = after.split()
+                    for word in words:
+                        if any(kw in word.lower() for kw in ['count', 'no', 'none', 'food', 'vegetarian', 'vegan', 'gluten',
+                                                               'dairy', 'nut', 'squad', 'day', 'allergy', 'intolerant', 'halal', 'meat', 'pork', 'chicken', 'fish', 'shellfish']):
                             break
+                        name += word + " "
+                    name = name.strip()
 
-                # Default values
-                day_one = "Count me in"
-                day_two = "Count me in"
-                squad = "Squad 1"
+                if not name and before and not any(c in before for c in ['%', '$', '&', '@', '<', '>', '=']):
+                    words = before.split()
+                    if words:
+                        name = ' '.join(words[-3:])
 
-                # Look for "no food" patterns
-                if 'no food' in remaining_text or 'no ' in remaining_text:
-                    day_one = "No food for me"
+                emails_found[email] = {
+                    'line_idx': line_idx,
+                    'name': name,
+                    'after_text': after
+                }
 
-                if name:  # Only add if we have a name
-                    attendees.append([
-                        email,
-                        name,
-                        day_one,
-                        day_two,
-                        restrictions,
-                        squad
-                    ])
+        # Extract standalone names (lines that look like names but have no email)
+        if '@' not in line and len(line.split()) >= 1 and len(line.split()) <= 3:
+            # This might be a standalone name
+            if not any(kw in line.lower() for kw in ['format', 'count', 'squad', 'day', 'none', '%', 'sheet', 'ready']):
+                name = re.sub(r'[^a-zA-Z\s\'-.]', '', line).strip()
+                if name and len(name) >= 3 and len(name.split()) <= 3:
+                    names_found[line_idx] = name
+
+    # Second pass: match standalone names to nearby emails
+    for email, email_info in emails_found.items():
+        name = email_info['name']
+
+        # If no name found on the email line, look for nearest name
+        if not name or len(name) < 3:
+            line_idx = email_info['line_idx']
+            # Look for names within 5 lines before or after
+            for offset in range(1, 6):
+                # Check before
+                if line_idx - offset in names_found:
+                    candidate = names_found[line_idx - offset]
+                    if len(candidate) >= 3:
+                        name = candidate
+                        break
+                # Check after
+                if line_idx + offset in names_found:
+                    candidate = names_found[line_idx + offset]
+                    if len(candidate) >= 3:
+                        name = candidate
+                        break
+
+        # Sanitize name
+        name = re.sub(r'[^a-zA-Z\s\'-.]', '', name).strip()
+        if len(name.split()) > 4:
+            name = ' '.join(name.split()[:3])
+
+        # Parse restrictions
+        restrictions = "None"
+        if email_info['after_text']:
+            after_lower = email_info['after_text'].lower()
+            for restriction in ['vegetarian', 'vegan', 'gluten', 'dairy', 'nut', 'lactose', 'halal', 'pork', 'meat', 'chicken', 'fish', 'shellfish', 'allergy', 'carb']:
+                if restriction in after_lower:
+                    restrictions = restriction.capitalize()
+                    break
+
+        # Add attendee if we have a good name
+        if name and len(name) >= 3 and len(name.split()) >= 1:
+            attendees.append([
+                email,
+                name,
+                "Count me in",
+                "Count me in",
+                restrictions,
+                "Squad 1"
+            ])
 
     return attendees
 
@@ -202,8 +225,12 @@ def main():
     print("\nExtracting text from images...")
     text = extract_text_from_images(existing_images)
 
-    # Debug: show extracted text length and first 500 chars
+    # Debug: save raw OCR text for inspection
     print(f"\nDEBUG: Extracted {len(text)} characters of text")
+    with open("ocr_output.txt", "w", encoding="utf-8") as f:
+        f.write(text)
+    print("Raw OCR text saved to ocr_output.txt")
+
     if text.strip():
         print("First 500 characters of extracted text:")
         print("-" * 50)

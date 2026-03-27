@@ -127,7 +127,10 @@
       "Bash(\"C:\\\\Users\\\\learn\\\\AppData\\\\Local\\\\Programs\\\\Tesseract-OCR\\\\tesseract.exe\" --version)",
       "Bash(bash generate_qr.bat)",
       "Bash(rm -rf qr_output)",
-      "Bash(mkdir qr_output)"
+      "Bash(mkdir qr_output)",
+      "Bash(cp qr-generator/attendees_extracted.xlsx qr-generator/attendees.xlsx)",
+      "Bash(rm -rf qr-generator/qr_output)",
+      "Bash(mkdir qr-generator/qr_output)"
     ]
   }
 }
