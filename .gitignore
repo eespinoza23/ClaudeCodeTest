@@ -1,3 +1,25 @@
-.claude/
-.claude-memory.md
-.worktrees/
+# QR code output folders
+qr_codes/
+test_output/
+output/
+final_test/
+*.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
