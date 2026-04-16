@@ -32,7 +32,9 @@ Transform Poker Points from individual sticky estimation tool to real-time colla
 
 2. **Voting Screen** (new)
    - Sticky title + optional notes
-   - Vote buttons (scheme: 1, 2, 3, 5, 8, 13, 21, ?)
+   - **Scheme selector** (Fibonacci, Modified Fibonacci, T-Shirt, or custom)
+   - Vote buttons (dynamic based on selected scheme)
+   - Edit scheme button (add/remove/modify values, persists for session)
    - Reveal button (after all vote or manual trigger)
    - Vote display (count before reveal, all votes after)
    - Average calculation + display
@@ -92,6 +94,10 @@ Transform Poker Points from individual sticky estimation tool to real-time colla
       "stickyId": "figma_sticky_123",
       "stickyTitle": "As a user, I can login",
       "stickyNotes": "Support SSO + password reset",
+      "scheme": {
+        "name": "Fibonacci",
+        "values": [1, 2, 3, 5, 8, 13, 21, "?"]
+      },
       "votes": [
         { "userId": "user1", "value": 5, "timestamp": 1713292810000 },
         { "userId": "user2", "value": 8, "timestamp": 1713292812000 }
@@ -151,21 +157,28 @@ Final assigned value stored as sticky property (existing mechanism, extended):
 **Broadcast:** Notify all participants of new user  
 **Result:** User sees live voting screen, current round state
 
-### 3. Vote (Hidden)
+### 3. Select Scheme (First Round)
 
-**Plugin UI:** User clicks value (1, 2, 3, 5, 8, 13, 21, ?)  
+**Plugin UI:** Choose scheme (Fibonacci, Modified Fibonacci, T-Shirt, custom)  
+**Option:** Edit scheme values if needed  
+**Backend:** Store selected scheme for round  
+**Result:** Scheme persists across participants + rounds unless changed
+
+### 4. Vote (Hidden)
+
+**Plugin UI:** Click value from selected scheme  
 **Backend:** Store vote, broadcast count (not values)  
 **Plugin UI:** Show "3 votes cast, 2 waiting..."  
 **Result:** Vote hidden until reveal
 
-### 4. Reveal
+### 5. Reveal
 
 **Plugin UI:** "Reveal" button (manual or auto-trigger after timeout)  
 **Backend:** Broadcast all votes + calculated average  
 **Plugin UI:** Display all votes + average  
 **Result:** Participants see voting distribution
 
-### 5. Assign Value
+### 6. Assign Value
 
 **Plugin UI:** User clicks "Assign X to Sticky"  
 **Plugin → FigJam:** Write final value as sticky property  
@@ -173,7 +186,7 @@ Final assigned value stored as sticky property (existing mechanism, extended):
 **Plugin UI:** Show success, offer next action  
 **Result:** Value persisted in FigJam sticky
 
-### 6. Next Action
+### 7. Next Action
 
 **Option A: Next Sticky**
 - Modal: Select existing sticky from board OR create new
