@@ -4,48 +4,59 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Context
 
-**Project:** ClaudeCodeTest — Persistent memory infrastructure testbed for Claude Code
+**ClaudeCodeTest** — Persistent memory infrastructure testbed for Claude Code. Acts as a sandbox for:
+- Memory system design and validation
+- Skills development and testing (.agents/skills/)
+- Documentation for cross-project work (docs/superpowers/)
 
-**Repo status (2026-04-11):** Cleaned & minimal. Legacy experiments archived to `ClaudeCodeTest-archive/` (outside git). Active content: memory infrastructure, design specs, implementation plans.
+**Status:** Cleaned 2026-04-11. Archive of legacy experiments at `ClaudeCodeTest-archive/` (outside git).
 
-## Persistent Memory
+## Repository Structure
 
-The `memory/` directory in this repo stores context across sessions:
+### `memory/` — Session-independent context
+Persists across all sessions (indexed at `~/.claude/projects/.../memory/MEMORY.md`):
+- `decisions.md` — Architectural decisions with reasoning
+- `people.md` — People and roles across projects
+- `preferences.md` — Coding conventions (e.g., Python launcher, HTML format)
+- `user.md` — User environment facts
+- `decisions.csv` — Decision log with 30-day review tracking
 
-```
-memory/decisions.md   — architectural decisions + rationale
-memory/people.md      — people involved in projects
-memory/preferences.md — coding conventions and patterns
-memory/user.md        — stable user facts and environment
-memory/decisions.csv  — decision log with review dates
-```
+Update memory during work; these files inform all future sessions on this project.
 
-**Workflow:**
-- **Session start:** Read these files (loaded via MEMORY.md index in ~/.claude/)
-- **During work:** Log decisions to decisions.csv as they're made
-- **Session end:** Update memory files with new patterns/decisions/people
+### `.remember/` — Session-specific logs
+Daily captures of patterns, discoveries, and context. Not version-controlled; for in-session reference.
 
-**How to update:**
-```bash
-# Log a decision (auto-adds 30-day review date)
-bash scripts/log_decision.sh "decision" "reasoning" "expected_outcome"
+### `.agents/skills/` — Testbed for skill development
+Skills under development or testing:
+- `caveman-compress/` — Token compression for memory files
+- `caveman/`, `caveman-commit/`, `caveman-help/`, `caveman-review/` — Caveman toolkit variants
+- `compress/` — Generic compression utility
 
-# View decisions due for review
-bash scripts/review.sh
-```
+Skills here may be reference implementations or experimental versions.
 
-**Key memory files outside repo:** Global memories stored in `C:\Users\learn\.claude\projects\I--Mon-disque-Canada-2026-01---Development-ClaudeCodeTest\memory\` — these persist across all sessions and include:
-- project_claudecodetest_cleaned.md
-- feedback_subagent_workflow.md
-- feedback_token_optimization.md
-- reference_paths.md
-- project_pi_dashboard.md (deployment pending)
+### `docs/superpowers/` — Cross-project planning
+Design specs and implementation plans for major projects (Poker Points, PI Dashboard, etc.):
+- `specs/` — Technical design documents with architecture, API, UI flow
+- `plans/` — Step-by-step implementation roadmaps with TDD structure
 
-## Git Workflow
+## Working with This Repo
 
-Commit and push to GitHub regularly throughout work — after each meaningful change, not just at the end. This ensures work is never lost.
+### Memory Updates
+Update `memory/` files when you:
+- Learn a coding pattern or preference
+- Make a significant architectural decision
+- Need to record who's involved in what
 
-- Use clear, specific commit messages describing what changed and why (e.g. `fix: clamp player position to canvas bounds` not `update`)
-- Push after every commit: `git add -A && git commit -m "..." && git push`
-- Never leave significant work uncommitted at the end of a session
+These changes persist across all future sessions; they're the primary value of this repo.
+
+### Skills Development
+Skills in `.agents/skills/` are testbed projects. If working on a skill:
+1. Work in a worktree to isolate changes
+2. Follow the skill's own CLAUDE.md or SKILL.md for development guidance
+3. Commit regularly to avoid losing work
+
+### Git Workflow
+- Commit after each meaningful change (not batched at session end)
+- Push immediately after each commit: `git add -A && git commit -m "..." && git push`
+- Use imperative, specific messages: `fix: handle edge case in decision logging` not `update`
 
